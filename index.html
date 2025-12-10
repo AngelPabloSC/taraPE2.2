@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>Carga de imágenes</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <!-- Preload de la imagen que más se ve (primera de la galería) -->
+  <link rel="preload" as="image" href="1.sm.webp" />
+
+  <style>
+    :root {
+      --primary: #1976d2;
+      --primary-light: #e3f2fd;
+      --bg: #f5f5f5;
+      --card-bg: #ffffff;
+      --border-radius: 16px;
+      --shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+      --skeleton-base: #e0e0e0;
+      --skeleton-highlight: #f5f5f5;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+        sans-serif;
+    }
+
+    body {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--bg);
+    }
+
+    .app-wrapper {
+      width: 100%;
+      max-width: 900px;
+      padding: 16px;
+    }
+
+    .card {
+      background: var(--card-bg);
+      border-radius: var(--border-radius);
+      padding: 32px;
+      box-shadow: var(--shadow);
+    }
+
+    .title {
+      text-align: center;
+      font-size: 1.5rem;
+      margin-bottom: 4px;
+    }
+
+    .subtitle {
+      text-align: center;
+      font-size: 0.9rem;
+      color: #666;
+      margin-bottom: 24px;
+    }
+
+    .center {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 24px;
+    }
+
+    .btn {
+      border: none;
+      outline: none;
+      border-radius: 999px;
+      padding: 10px 20px;
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: transform 0.1s ease, box-shadow 0.1s ease,
+        background 0.1s ease;
+    }
+
+    .btn-outlined {
+      background: #fff;
+      border: 1px solid #ccc;
+    }
+
+    .btn-contained {
+      width: 100%;
+      background: var(--primary);
+      color: #fff;
+      margin-top: 4px;
+      box-shadow: 0 4px 12px rgba(25, 118, 210, 0.3);
+    }
+
+    .btn:active {
+      transform: translateY(1px);
+      box-shadow: none;
+    }
+
+    .btn[disabled] {
+      opacity: 0.6;
+      cursor: default;
+      box-shadow: none;
+    }
+
+    .file-info {
+      font-size: 0.85rem;
+      color: #555;
+    }
+
+    .file-info strong {
+      font-weight: 600;
+    }
+
+    .preview {
+      display: flex;
+      justify-content: center;
+      margin-bottom: 24px;
+    }
+
+    .preview-image {
+      width: 200px;
+      height: 200px;
+      border-radius: 24px;
+      object-fit: cover;
+      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.15);
+    }
+
+    .progress-bar {
+      width: 100%;
+      height: 4px;
+      border-radius: 999px;
+      background: #eee;
+      overflow: hidden;
+      margin-bottom: 12px;
+      display: none;
+    }
+
+    .progress-inner {
+      height: 100%;
+      width: 100%;
+      background: var(--primary);
+      animation: loading 1s infinite linear;
+      transform-origin: left;
+    }
+
+    @keyframes loading {
+      0% {
+        transform: scaleX(0);
+      }
+      50% {
+        transform: scaleX(1);
+      }
+      100% {
+        transform: scaleX(0);
+      }
+    }
+
+    .gallery-section {
+      margin-top: 32px;
+    }
+
+    .gallery-title {
+      font-size: 1.1rem;
+      margin-bottom: 12px;
+    }
+
+    .gallery-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 16px;
+    }
+
+    .gallery-card {
+      background: #fff;
+      border-radius: 12px;
+      padding: 10px;
+      box-shadow: 0 3px 8px rgba(0, 0, 0, 0.05);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .gallery-img {
+      width: 100%;
+      height: 140px;
+      border-radius: 10px;
+      object-fit: cover;
+      margin-bottom: 8px;
+    }
+
+    .gallery-name {
+      font-size: 0.9rem;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+      overflow: hidden;
+      margin-bottom: 2px;
+    }
+
+    .gallery-size {
+      font-size: 0.75rem;
+      color: #777;
+    }
+
+    /* Skeleton */
+    .skeleton-card {
+      background: #fff;
+      border-radius: 12px;
+      padding: 10px;
+      box-shadow: 0 3px 8px rgba(0, 0, 0, 0.04);
+    }
+
+    .skeleton-block,
+    .skeleton-line {
+      background: linear-gradient(
+        90deg,
+        var(--skeleton-base),
+        var(--skeleton-highlight),
+        var(--skeleton-base)
+      );
+      background-size: 200% 100%;
+      animation: shimmer 1.2s infinite;
+      border-radius: 8px;
+    }
+
+    .skeleton-block {
+      width: 100%;
+      height: 140px;
+      margin-bottom: 8px;
+    }
+
+    .skeleton-line {
+      height: 10px;
+      margin-bottom: 6px;
+    }
+
+    .skeleton-line.short {
+      width: 50%;
+    }
+
+    .skeleton-line.long {
+      width: 80%;
+    }
+
+    @keyframes shimmer {
+      0% {
+        background-position: -200% 0;
+      }
+      100% {
+        background-position: 200% 0;
+      }
+    }
+
+    /* Dialog */
+    .dialog-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.3);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 10;
+    }
+
+    .dialog {
+      background: #fff;
+      border-radius: 12px;
+      padding: 20px 24px;
+      max-width: 360px;
+      width: 100%;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+    }
+
+    .dialog-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 8px;
+      font-weight: 600;
+    }
+
+    .dialog-header.success {
+      color: #2e7d32;
+    }
+
+    .dialog-header.error {
+      color: #c62828;
+    }
+
+    .dialog-body {
+      font-size: 0.9rem;
+      color: #555;
+      margin-bottom: 12px;
+    }
+
+    .dialog-footer {
+      display: flex;
+      justify-content: flex-end;
+    }
+
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 20px;
+      height: 20px;
+      border-radius: 999px;
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: #fff;
+    }
+
+    .chip.success {
+      background: #2e7d32;
+    }
+
+    .chip.error {
+      background: #c62828;
+    }
+  </style>
+</head>
+<body>
+  <div class="app-wrapper">
+    <div class="card">
+      <h1 class="title">Carga de imágenes</h1>
+      <p class="subtitle">
+        Selecciona una imagen desde tu computadora para previsualizarla y subirla.
+      </p>
+
+      <div class="center">
+        <input type="file" id="fileInput" accept="image/*" hidden />
+        <button
+          class="btn btn-outlined"
+          id="chooseBtn"
+          type="button"
+        >
+          ELEGIR IMAGEN
+        </button>
+        <div id="fileInfo" class="file-info"></div>
+      </div>
+
+      <div class="preview" id="previewContainer" style="display: none;">
+        <img
+          id="previewImg"
+          class="preview-image"
+          alt="Preview"
+          loading="lazy"
+          decoding="async"
+          width="200"
+          height="200"
+        />
+      </div>
+
+      <div class="progress-bar" id="progressBar">
+        <div class="progress-inner"></div>
+      </div>
+
+      <button class="btn btn-contained" id="uploadBtn" type="button">
+        SUBIR IMAGEN
+      </button>
+
+      <!-- Galería -->
+      <section class="gallery-section">
+        <h2 class="gallery-title">Galería</h2>
+
+        <!-- Skeleton -->
+        <div class="gallery-grid" id="skeletonGallery">
+          <div class="skeleton-card">
+            <div class="skeleton-block"></div>
+            <div class="skeleton-line long"></div>
+            <div class="skeleton-line short"></div>
+          </div>
+          <div class="skeleton-card">
+            <div class="skeleton-block"></div>
+            <div class="skeleton-line long"></div>
+            <div class="skeleton-line short"></div>
+          </div>
+          <div class="skeleton-card">
+            <div class="skeleton-block"></div>
+            <div class="skeleton-line long"></div>
+            <div class="skeleton-line short"></div>
+          </div>
+        </div>
+
+        <!-- Galería real -->
+        <div class="gallery-grid" id="realGallery" style="display: none;">
+          <!-- Se llenará por JS -->
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <!-- Dialog -->
+  <div class="dialog-backdrop" id="dialogBackdrop">
+    <div class="dialog">
+      <div class="dialog-header" id="dialogHeader">
+        <span class="chip" id="dialogChip">!</span>
+        <span id="dialogTitle">Mensaje</span>
+      </div>
+      <div class="dialog-body" id="dialogMessage"></div>
+      <div class="dialog-footer">
+        <button class="btn btn-outlined" id="dialogCloseBtn" type="button">
+          Entendido
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const fileInput = document.getElementById("fileInput");
+    const chooseBtn = document.getElementById("chooseBtn");
+    const uploadBtn = document.getElementById("uploadBtn");
+    const fileInfo = document.getElementById("fileInfo");
+    const previewContainer = document.getElementById("previewContainer");
+    const previewImg = document.getElementById("previewImg");
+    const progressBar = document.getElementById("progressBar");
+
+    const skeletonGallery = document.getElementById("skeletonGallery");
+    const realGallery = document.getElementById("realGallery");
+
+    const dialogBackdrop = document.getElementById("dialogBackdrop");
+    const dialogHeader = document.getElementById("dialogHeader");
+    const dialogTitle = document.getElementById("dialogTitle");
+    const dialogMessage = document.getElementById("dialogMessage");
+    const dialogChip = document.getElementById("dialogChip");
+    const dialogCloseBtn = document.getElementById("dialogCloseBtn");
+
+    let selectedFile = null;
+
+    // Imágenes precargadas (en la misma carpeta que index.html)
+    const initialImages = [
+      { url: "1.sm.webp", name: "page1.webp", size: 145000 },
+      { url: "2.sm.webp", name: "snowboard.webp", size: 98000 },
+      { url: "3.sm.webp", name: "Nature.webp", size: 164500 },
+    ];
+
+    function formatKB(size) {
+      return (size / 1024).toFixed(1) + " KB";
+    }
+
+    function renderGallery(images) {
+      realGallery.innerHTML = "";
+      images.forEach((img, index) => {
+        const card = document.createElement("div");
+        card.className = "gallery-card";
+
+        const image = document.createElement("img");
+        image.className = "gallery-img";
+        image.src = img.url;
+        image.alt = img.name;
+        image.width = 320;
+        image.height = 140;
+        image.decoding = "async";
+
+        // Solo la primera imagen se carga normal (puede ser LCP),
+        // las demás usan lazy-loading
+        if (index > 0) {
+          image.loading = "lazy";
+        }
+
+        const name = document.createElement("div");
+        name.className = "gallery-name";
+        name.textContent = img.name;
+
+        const size = document.createElement("div");
+        size.className = "gallery-size";
+        size.textContent = formatKB(img.size);
+
+        card.appendChild(image);
+        card.appendChild(name);
+        card.appendChild(size);
+
+        realGallery.appendChild(card);
+      });
+    }
+
+    function showDialog(type, message) {
+      dialogMessage.textContent = message;
+      dialogBackdrop.style.display = "flex";
+
+      if (type === "error") {
+        dialogTitle.textContent = "Ocurrió un error";
+        dialogHeader.classList.remove("success");
+        dialogHeader.classList.add("error");
+        dialogChip.classList.remove("success");
+        dialogChip.classList.add("error");
+        dialogChip.textContent = "!";
+      } else {
+        dialogTitle.textContent = "Operación exitosa";
+        dialogHeader.classList.remove("error");
+        dialogHeader.classList.add("success");
+        dialogChip.classList.remove("error");
+        dialogChip.classList.add("success");
+        dialogChip.textContent = "✓";
+      }
+    }
+
+    function hideDialog() {
+      dialogBackdrop.style.display = "none";
+    }
+
+    dialogCloseBtn.addEventListener("click", hideDialog);
+    dialogBackdrop.addEventListener("click", (e) => {
+      if (e.target === dialogBackdrop) hideDialog();
+    });
+
+    chooseBtn.addEventListener("click", () => fileInput.click());
+
+    fileInput.addEventListener("change", (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      if (!file.type.startsWith("image/")) {
+        showDialog("error", "Solo se permiten archivos de imagen (jpg, png, etc.)");
+        fileInput.value = "";
+        return;
+      }
+
+      selectedFile = file;
+      fileInfo.innerHTML = `Archivo: <strong>${file.name}</strong> — ${formatKB(
+        file.size
+      )}`;
+
+      const url = URL.createObjectURL(file);
+      previewImg.src = url;
+      previewContainer.style.display = "flex";
+    });
+
+    uploadBtn.addEventListener("click", () => {
+      if (!selectedFile) {
+        showDialog("error", "Primero selecciona una imagen 🙃");
+        return;
+      }
+
+      uploadBtn.disabled = true;
+      uploadBtn.textContent = "Subiendo...";
+      progressBar.style.display = "block";
+
+      setTimeout(() => {
+        progressBar.style.display = "none";
+        uploadBtn.disabled = false;
+        uploadBtn.textContent = "SUBIR IMAGEN";
+
+        // Añadir a la galería
+        initialImages.push({
+          url: previewImg.src,
+          name: selectedFile.name,
+          size: selectedFile.size,
+        });
+        renderGallery(initialImages);
+
+        showDialog(
+          "success",
+          `Imagen "${selectedFile.name}" subida correctamente (simulado)`
+        );
+
+        // Reset
+        selectedFile = null;
+        fileInput.value = "";
+        fileInfo.textContent = "";
+        previewContainer.style.display = "none";
+      }, 2000);
+    });
+
+    // Mostrar skeleton 2s y luego la galería, SIN esperar al "load"
+    renderGallery(initialImages);
+    setTimeout(() => {
+      skeletonGallery.style.display = "none";
+      realGallery.style.display = "grid";
+    }, 2000);
+  </script>
+</body>
+</html>
